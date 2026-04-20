@@ -324,7 +324,7 @@
       <span class="section-badge">Section 2</span>
       <h2>합성 음성 평가</h2>
     </div>
-    <p class="section-desc">실제 음성과 AI 합성 음성을 모두 들은 후, 합성 음성이 얼마나 <strong>다른 사람처럼 들리고 부자연스러운지</strong> 평가해 주세요. (총 15문항)</p>
+    <p class="section-desc">실제 음성과 AI 합성 음성을 모두 들은 후, 합성 음성이 얼마나 <strong>다른 사람처럼 들리거나 부자연스러운지</strong> 평가해 주세요. (총 15문항)</p>
     <div id="q2-cards"></div>
 
     <div class="submit-section">
@@ -420,7 +420,7 @@ Q2_DATA.forEach((item, i) => {
   card.id = `card-Q2_${num}`;
   card.innerHTML = `
     <div class="q-number">Q2-${num} &nbsp;·&nbsp; 화자 ${item.spk}</div>
-    <div class="q-text">두 번째 AI 합성 음성은 얼마나 다른 사람처럼 들리고 부자연스럽게 느껴지나요?</div>
+    <div class="q-text">두 번째 AI 합성 음성은 얼마나 다른 사람처럼 들리거나 부자연스럽게 느껴지나요?</div>
     <div class="audio-block">
       <div class="audio-label">🎙 실제 음성</div>
       <audio controls preload="none" src="Q2/spk${item.spk}_orig.wav"></audio>
