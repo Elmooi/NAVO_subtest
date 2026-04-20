@@ -429,7 +429,7 @@ Q2_DATA.forEach((item, i) => {
       <div class="audio-label">🤖 AI 합성 음성</div>
       <audio controls preload="none" src="Q2/spk${item.spk}_tts.${item.tts_ext}"></audio>
     </div>
-    ${makeLikert(`Q2_${num}`, '1 · 거의 동일하고 자연스러움', '5 · 매우 다른 사람 같고 매우 부자연스러움')}`;
+    ${makeLikert(`Q2_${num}`, '1 · 거의 동일하고 자연스러움', '5 · 매우 다른 사람 같거나 매우 부자연스러움')}`;
   q2Container.appendChild(card);
 });
 
