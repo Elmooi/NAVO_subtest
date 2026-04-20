@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>음성 품질 평가</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+<style>
+  :root {
+    --primary: #4F6EF7;
+    --primary-light: #EEF1FF;
+    --accent: #FF6B6B;
+    --bg: #F5F7FA;
+    --card: #FFFFFF;
+    --border: #E0E5EF;
+    --text: #1A1D2E;
+    --muted: #6B7280;
+    --error: #FF6B6B;
+    --error-bg: #FFF0F0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Pretendard', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── 진행률 바 ── */
+  #progress-bar-container {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 100;
+    background: white;
+    border-top: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+  }
+  #progress-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--primary);
+    white-space: nowrap;
+    min-width: 80px;
+  }
+  #progress-track {
+    flex: 1;
+    height: 8px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  #progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), #818CF8);
+    border-radius: 99px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  /* ── 메인 콘텐츠 ── */
+  #survey-wrapper {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  .survey-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .survey-header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .survey-header p {
+    font-size: 16px;
+    color: var(--muted);
+    line-height: 1.7;
+    max-width: 620px;
+    margin: 0 auto;
+  }
+
+  /* ── 섹션 헤더 ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 36px 0 18px;
+  }
+  .section-badge {
+    background: var(--primary);
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 99px;
+  }
+  .section-header h2 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .section-desc {
+    font-size: 15px;
+    color: var(--muted);
+    background: var(--primary-light);
+    border-left: 3px solid var(--primary);
+    padding: 10px 14px;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  /* ── 카드 ── */
+  .question-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-bottom: 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .question-card.error {
+    border-color: var(--error);
+    background: var(--error-bg);
+    box-shadow: 0 0 0 3px rgba(255,107,107,0.15);
+  }
+  .q-number {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 8px;
+    letter-spacing: 0.3px;
+  }
+  .q-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── 오디오 플레이어 ── */
+  .audio-block {
+    margin-bottom: 12px;
+  }
+  .audio-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+  audio {
+    width: 100%;
+    height: 36px;
+    border-radius: 8px;
+  }
+
+  /* ── 리커트 척도 ── */
+  .likert-container {
+    margin-top: 16px;
+  }
+  .likert-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+  .likert-labels span { max-width: 45%; }
+  .likert-labels span:last-child { text-align: right; }
+  .likert-options {
+    display: flex;
+    gap: 8px;
+  }
+  .likert-options label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    flex: 1;
+  }
+  .likert-options input[type="radio"] { display: none; }
+  .radio-btn {
+    width: 100%;
+    padding: 8px 0;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--muted);
+    transition: all 0.15s;
+    background: white;
+  }
+  .likert-options input[type="radio"]:checked + .radio-btn {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+    box-shadow: 0 2px 8px rgba(79,110,247,0.35);
+  }
+  .likert-options label:hover .radio-btn {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  /* ── 제출 영역 ── */
+  .submit-section {
+    margin-top: 36px;
+    text-align: center;
+  }
+  #submit-btn {
+    background: linear-gradient(135deg, var(--primary), #818CF8);
+    color: white;
+    border: none;
+    padding: 14px 48px;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: 'Pretendard', sans-serif;
+    transition: opacity 0.2s, transform 0.1s;
+    box-shadow: 0 4px 14px rgba(79,110,247,0.4);
+  }
+  #submit-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  #submit-btn:active { transform: translateY(0); }
+  #submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  #error-msg {
+    color: var(--error);
+    font-size: 13px;
+    margin-top: 12px;
+    display: none;
+  }
+
+  /* ── 완료 화면 ── */
+  #complete-screen {
+    display: none;
+    max-width: 500px;
+    margin: 120px auto;
+    text-align: center;
+    padding: 20px;
+  }
+  .complete-icon {
+    width: 80px;
+    height: 80px;
+    background: #F0FDF4;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 36px;
+  }
+  #complete-screen h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  #complete-screen p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* ── 반응형 ── */
+  @media (max-width: 520px) {
+    .survey-header h1 { font-size: 20px; }
+    .question-card { padding: 16px; }
+    #progress-bar-container { padding: 8px 12px; }
+    .radio-btn { font-size: 13px; padding: 7px 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 진행률 바 -->
+<div id="progress-bar-container">
+  <span id="progress-label">0 / 31 완료</span>
+  <div id="progress-track">
+    <div id="progress-fill"></div>
+  </div>
+</div>
+
+<!-- 완료 화면 -->
+<div id="complete-screen">
+  <div class="complete-icon">✓</div>
+  <h2>응답이 완료되었습니다. 감사합니다!</h2>
+  <p>소중한 시간을 내어 참여해 주셔서 감사합니다.<br>귀하의 응답이 성공적으로 제출되었습니다.</p>
+</div>
+
+<!-- 설문 본체 -->
+<div id="survey-wrapper">
+  <div class="survey-header">
+    <h1>음성 품질 평가</h1>
+    <p>본 설문은 <strong>NaVo: Natural Voice Protection against Voice Cloning Attacks via Generative Universal Adversarial Audio</strong> 연구의 주관적 평가를 위해 제작되었습니다.</p>
+  </div>
+
+  <form id="survey-form">
+
+    <!-- Section 1 -->
+    <div class="section-header">
+      <span class="section-badge">Section 1</span>
+      <h2>보호 음성 품질 평가</h2>
+    </div>
+    <p class="section-desc">각 음성에는 배경 소음이 포함되어 있습니다. 이는 연구 설계상 <strong>의도적으로 삽입된 것</strong>으로, 소음의 유무는 평가 기준이 아닙니다. <strong>발화 음성 자체가 얼마나 자연스럽게 들리는지</strong>를 평가해 주세요. (총 16문항)</p>
+    <div id="q1-cards"></div>
+
+    <!-- Section 2 -->
+    <div class="section-header">
+      <span class="section-badge">Section 2</span>
+      <h2>합성 음성 평가</h2>
+    </div>
+    <p class="section-desc">실제 음성과 AI 합성 음성을 모두 들은 후, 합성 음성이 얼마나 <strong>다른 사람처럼 들리고 부자연스러운지</strong> 평가해 주세요. (총 15문항)</p>
+    <div id="q2-cards"></div>
+
+    <div class="submit-section">
+      <button type="button" id="submit-btn">제출하기</button>
+      <p id="error-msg">⚠ 모든 문항에 응답해 주세요. 미응답 문항이 강조 표시됩니다.</p>
+    </div>
+
+  </form>
+</div>
+
+<script>
+const SCRIPT_URL = "AKfycbzi2y8zi9BExv9wd4B-UyjEXthJhrp16xG9NSUGAqw7Ae_0_XMREJ44ZgrWq5mz-ZDA";
+
+const Q1_DATA = [
+  { category: "babble", file: "1.wav" },
+  { category: "babble", file: "2.wav" },
+  { category: "babble", file: "3.wav" },
+  { category: "babble", file: "4.wav" },
+  { category: "music",  file: "1.wav" },
+  { category: "music",  file: "2.wav" },
+  { category: "music",  file: "3.wav" },
+  { category: "music",  file: "4.wav" },
+  { category: "office", file: "1.wav" },
+  { category: "office", file: "2.wav" },
+  { category: "office", file: "3.wav" },
+  { category: "office", file: "4.wav" },
+  { category: "rain",   file: "1.wav" },
+  { category: "rain",   file: "2.wav" },
+  { category: "rain",   file: "3.wav" },
+  { category: "rain",   file: "4.wav" },
+];
+
+const Q2_DATA = [
+  { spk: 1,  tts_ext: "wav" },
+  { spk: 2,  tts_ext: "wav" },
+  { spk: 3,  tts_ext: "wav" },
+  { spk: 4,  tts_ext: "wav" },
+  { spk: 5,  tts_ext: "wav" },
+  { spk: 6,  tts_ext: "wav" },
+  { spk: 7,  tts_ext: "wav" },
+  { spk: 8,  tts_ext: "wav" },
+  { spk: 9,  tts_ext: "mp3" },
+  { spk: 10, tts_ext: "mp3" },
+  { spk: 11, tts_ext: "mp3" },
+  { spk: 12, tts_ext: "wav" },
+  { spk: 13, tts_ext: "wav" },
+  { spk: 14, tts_ext: "mp3" },
+  { spk: 15, tts_ext: "mp3" },
+];
+
+const TOTAL = 31;
+
+function makeLikert(name, loLabel, hiLabel) {
+  return `
+    <div class="likert-container">
+      <div class="likert-labels">
+        <span>${loLabel}</span>
+        <span>${hiLabel}</span>
+      </div>
+      <div class="likert-options">
+        ${[1,2,3,4,5].map(v => `
+          <label>
+            <input type="radio" name="${name}" value="${v}">
+            <span class="radio-btn">${v}</span>
+          </label>`).join('')}
+      </div>
+    </div>`;
+}
+
+// Q1 카드 생성
+const q1Container = document.getElementById('q1-cards');
+Q1_DATA.forEach((item, i) => {
+  const num = i + 1;
+  const card = document.createElement('div');
+  card.className = 'question-card';
+  card.id = `card-Q1_${num}`;
+  card.innerHTML = `
+    <div class="q-number">Q1-${num}</div>
+    <div class="q-text">이 음성은 얼마나 명료하고 자연스럽게 들리나요?</div>
+    <div class="audio-block">
+      <audio controls preload="none" src="Q1/${item.category}/${item.file}"></audio>
+    </div>
+    ${makeLikert(`Q1_${num}`, '1 · 매우 부자연스럽고 어색함', '5 · 매우 자연스럽고 실제 음성 같음')}`;
+  q1Container.appendChild(card);
+});
+
+// Q2 카드 생성
+const q2Container = document.getElementById('q2-cards');
+Q2_DATA.forEach((item, i) => {
+  const num = i + 1;
+  const card = document.createElement('div');
+  card.className = 'question-card';
+  card.id = `card-Q2_${num}`;
+  card.innerHTML = `
+    <div class="q-number">Q2-${num} &nbsp;·&nbsp; 화자 ${item.spk}</div>
+    <div class="q-text">두 번째 AI 합성 음성은 얼마나 다른 사람처럼 들리고 부자연스럽게 느껴지나요?</div>
+    <div class="audio-block">
+      <div class="audio-label">🎙 실제 음성</div>
+      <audio controls preload="none" src="Q2/spk${item.spk}_orig.wav"></audio>
+    </div>
+    <div class="audio-block">
+      <div class="audio-label">🤖 AI 합성 음성</div>
+      <audio controls preload="none" src="Q2/spk${item.spk}_tts.${item.tts_ext}"></audio>
+    </div>
+    ${makeLikert(`Q2_${num}`, '1 · 거의 동일하고 자연스러움', '5 · 매우 다른 사람 같고 매우 부자연스러움')}`;
+  q2Container.appendChild(card);
+});
+
+// 진행률 업데이트
+function updateProgress() {
+  let answered = 0;
+  for (let i = 1; i <= 16; i++) {
+    if (document.querySelector(`input[name="Q1_${i}"]:checked`)) answered++;
+  }
+  for (let i = 1; i <= 15; i++) {
+    if (document.querySelector(`input[name="Q2_${i}"]:checked`)) answered++;
+  }
+  document.getElementById('progress-label').textContent = `${answered} / ${TOTAL} 완료`;
+  document.getElementById('progress-fill').style.width = `${(answered / TOTAL) * 100}%`;
+}
+
+document.getElementById('survey-form').addEventListener('change', updateProgress);
+
+// 제출
+document.getElementById('submit-btn').addEventListener('click', async () => {
+  const data = { timestamp: new Date().toISOString() };
+  const unanswered = [];
+
+  for (let i = 1; i <= 16; i++) {
+    const el = document.querySelector(`input[name="Q1_${i}"]:checked`);
+    if (el) data[`Q1_${i}`] = el.value;
+    else unanswered.push(`card-Q1_${i}`);
+  }
+  for (let i = 1; i <= 15; i++) {
+    const el = document.querySelector(`input[name="Q2_${i}"]:checked`);
+    if (el) data[`Q2_${i}`] = el.value;
+    else unanswered.push(`card-Q2_${i}`);
+  }
+
+  // 오류 표시 초기화
+  document.querySelectorAll('.question-card').forEach(c => c.classList.remove('error'));
+  document.getElementById('error-msg').style.display = 'none';
+
+  if (unanswered.length > 0) {
+    unanswered.forEach(id => {
+      const card = document.getElementById(id);
+      if (card) card.classList.add('error');
+    });
+    document.getElementById(unanswered[0]).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('error-msg').style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = '제출 중...';
+
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  } catch (e) {
+    console.error('제출 오류:', e);
+  }
+
+  document.getElementById('survey-wrapper').style.display = 'none';
+  document.getElementById('progress-bar-container').style.display = 'none';
+  document.getElementById('complete-screen').style.display = 'block';
+});
+</script>
+</body>
+</html>
