@@ -493,10 +493,18 @@ document.getElementById('submit-btn').addEventListener('click', async () => {
     console.error('제출 오류:', e);
   }
 
+  localStorage.setItem('navo_submitted', '1');
   document.getElementById('survey-wrapper').style.display = 'none';
   document.getElementById('progress-bar-container').style.display = 'none';
   document.getElementById('complete-screen').style.display = 'block';
 });
+
+// 이미 제출한 경우 설문 숨기기
+if (localStorage.getItem('navo_submitted')) {
+  document.getElementById('survey-wrapper').style.display = 'none';
+  document.getElementById('progress-bar-container').style.display = 'none';
+  document.getElementById('complete-screen').style.display = 'block';
+}
 </script>
 </body>
 </html>
